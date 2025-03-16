@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PolyChat | Professional Polygon Network Chat</title>
+    <link rel="stylesheet" href="static/css/style.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.8.0/dist/web3.min.js"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+</head>
+<body class="theme-light">
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <svg width="32" height="32" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M40 80C62.0914 80 80 62.0914 80 40C80 17.9086 62.0914 0 40 0C17.9086 0 0 17.9086 0 40C0 62.0914 17.9086 80 40 80Z" fill="#8247E5"/>
+                        <path d="M53.7022 40.0001L41.1796 52.5227L28.6571 40.0001L41.1796 27.4775L53.7022 40.0001Z" fill="white"/>
+                        <path d="M41.1796 19.7549L25.2959 35.6386L41.1796 51.5223L57.0633 35.6386L41.1796 19.7549Z" fill="white"/>
+                        <path d="M25.2959 44.3615L41.1796 60.2452L57.0633 44.3615L41.1796 28.4778L25.2959 44.3615Z" fill="white"/>
+                    </svg>
+                    <h1>PolyChat</h1>
+                </div>
+                <button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sun-icon">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="moon-icon">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="wallet-section">
+                <button id="connect-wallet" class="connect-button">Connect Wallet</button>
+                <div id="wallet-info" class="wallet-info hidden">
+                    <div class="user-avatar" id="sidebar-avatar">
+                        <img id="user-avatar" src="{{ url_for('static', filename='images/logo.jpg') }}" alt="User avatar">
+                    </div>
+                    <div class="wallet-details">
+                        <span id="display-name">Not connected</span>
+                        <span id="wallet-address">Not connected</span>
+                        <div class="wallet-actions">
+                            <button id="edit-profile" class="edit-profile-button">Edit Profile</button>
+                            <button id="disconnect-wallet" class="disconnect-button">Disconnect</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="network-status">
+                <div class="status-indicator offline" id="connection-status"></div>
+                <span id="status-text">Connecting...</span>
+            </div>
+            
+            <!-- Friend System UI -->
+            <div class="search-section">
+                <h2>Find Friends</h2>
+                <div class="search-container">
+                    <input type="text" id="search-user-input" placeholder="Search by wallet address...">
+
+                    <button id="search-button" class="search-button" disabled>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg>
+                    </button>
+                </div>
+                <div id="search-user-results" class="search-results"></div>
+            </div>
+            
+            <div class="friends-section">
+                <h2>Friends</h2>
+                <div id="friends-list" class="friends-list">
+                    <!-- Friends will be added here dynamically -->
+                </div>
+            </div>
+            
+            <div class="friend-requests-section">
+                <h2>Friend Requests</h2>
+                <div id="friend-requests-list" class="friend-requests-list">
+                    <!-- Friend requests will be added here dynamically -->
+                </div>
+            </div>
+            
+            <div class="private-chats-section">
+                <h2>Private Chats</h2>
+                <div id="private-chats-list" class="private-chats-list">
+                    <!-- Private chats will be added here dynamically -->
+                </div>
+            </div>
+            
+            <div class="rooms-section">
+                <h2>Chat Rooms</h2>
+                <ul id="rooms-list" class="rooms-list">
+                    <!-- Rooms will be added here dynamically -->
+                    <li class="room active" data-room="general">
+                        <span class="room-icon">#</span>
+                        <span class="room-name">General</span>
+                    </li>
+                </ul>
+            </div>
+            
+            <div class="active-users-section">
+                <h2>Active Users</h2>
+                <ul id="active-users-list" class="active-users-list">
+                    <!-- Active users will be added here dynamically -->
+                </ul>
+            </div>
+            
+            <div class="network-info">
+                <h2>Network Info</h2>
+                <div class="info-item">
+                    <span class="info-label">Chain ID:</span>
+                    <span id="chain-id">-</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Latest Block:</span>
+                    <span id="latest-block">-</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Gas Price:</span>
+                    <span id="gas-price">-</span>
+                </div>
+            </div>
+        </aside>
+        
+        <main class="chat-area">
+            <header class="chat-header">
+                <div class="current-room">
+                    <span class="room-icon">#</span>
+                    <span id="current-room-name">General</span>
+                </div>
+                <div class="room-description" id="room-description">
+                    Public chat for everyone
+                </div>
+                <div class="header-actions">
+                    <div id="typing-indicator" class="typing-indicator hidden">
+                        <span class="typing-text">Someone is typing...</span>
+                        <div class="typing-dots">
+                            <span class="dot"></span>
+                            <span class="dot"></span>
+                            <span class="dot"></span>
+                        </div>
+                    </div>
+                    <button id="mobile-menu-toggle" class="mobile-menu-toggle">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="3" y1="12" x2="21" y2="12"></line>
+                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                            <line x1="3" y1="18" x2="21" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+            </header>
+            
+            <div class="messages-container" id="messages">
+                <div class="welcome-message">
+                    <div class="welcome-header">
+                        <svg width="64" height="64" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M40 80C62.0914 80 80 62.0914 80 40C80 17.9086 62.0914 0 40 0C17.9086 0 0 17.9086 0 40C0 62.0914 17.9086 80 40 80Z" fill="#8247E5"/>
+                            <path d="M53.7022 40.0001L41.1796 52.5227L28.6571 40.0001L41.1796 27.4775L53.7022 40.0001Z" fill="white"/>
+                            <path d="M41.1796 19.7549L25.2959 35.6386L41.1796 51.5223L57.0633 35.6386L41.1796 19.7549Z" fill="white"/>
+                            <path d="M25.2959 44.3615L41.1796 60.2452L57.0633 44.3615L41.1796 28.4778L25.2959 44.3615Z" fill="white"/>
+                        </svg>
+                        <h2>Welcome to PolyChat</h2>
+                    </div>
+                    <p>Connect your wallet to start chatting on the Polygon network</p>
+                    <div class="welcome-features">
+                        <div class="feature">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                            </svg>
+                            <div>
+                                <h3>Multiple Chat Rooms</h3>
+                                <p>Join different rooms for various topics</p>
+                            </div>
+                        </div>
+                        <div class="feature">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="2" y1="12" x2="22" y2="12"></line>
+                                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                            </svg>
+                            <div>
+                                <h3>Polygon Network</h3>
+                                <p>Built on Polygon for fast, low-cost transactions</p>
+                            </div>
+                        </div>
+                        <div class="feature">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                            </svg>
+                            <div>
+                                <h3>Wallet Authentication</h3>
+                                <p>Secure login with your crypto wallet</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Messages will be added here dynamically -->
+            </div>
+            
+            <div class="input-container">
+                <div class="message-input-container">
+                    <button id="file-button" class="file-button" disabled>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                    </button>
+                    <input type="text" id="message-input" placeholder="Type your message..." disabled>
+                    <button id="emoji-button" class="emoji-button" disabled>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+                            <line x1="9" y1="9" x2="9.01" y2="9"></line>
+                            <line x1="15" y1="9" x2="15.01" y2="9"></line>
+                        </svg>
+                    </button>
+                    <button id="send-button" disabled>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                    </button>
+                </div>
+                <div id="file-preview" class="file-preview hidden">
+                    <div class="file-preview-content">
+                        <div class="file-preview-info">
+                            <span id="file-name">filename.jpg</span>
+                            <span id="file-size">2.3 MB</span>
+                        </div>
+                        <button id="remove-file" class="remove-file">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <div id="emoji-picker" class="emoji-picker hidden">
+            <div class="emoji-categories">
+                <button data-category="smileys" class="active">😀</button>
+                <button data-category="people">👋</button>
+                <button data-category="animals">🐶</button>
+                <button data-category="food">🍎</button>
+                <button data-category="travel">🚗</button>
+                <button data-category="activities">⚽</button>
+                <button data-category="objects">💡</button>
+                <button data-category="symbols">❤️</button>
+                <button data-category="flags">🏁</button>
+            </div>
+            <div class="emoji-list" id="emoji-list">
+                <!-- Emojis will be added here dynamically -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Profile Modal -->
+    <div id="profile-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Edit Profile</h2>
+                <button id="close-profile-modal" class="close-modal">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="profile-avatar-section">
+                    <div class="profile-avatar">
+                        <img id="profile-avatar-preview" src="{{ user_profile.avatar or ('https://api.dicebear.com/9.x/pixel-art/svg?seed=' ~ wallet_address ~ '&hair=short01,short02,short03,short04,short05') }}" alt="User avatar">
+                        <div class="avatar-overlay">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                                <circle cx="12" cy="13" r="4"></circle>
+                            </svg>
+                        </div>
+                    </div>
+                    <input type="file" id="avatar-upload" accept="image/*" hidden>
+                    <button id="change-avatar" class="change-avatar-button">Change Avatar</button>
+                </div>
+                <div class="profile-form">
+                    <div class="form-group">
+                        <label for="display-name-input">Display Name</label>
+                        <input type="text" id="display-name-input" placeholder="Enter your display name">
+                    </div>
+                    <div class="form-group">
+                        <label for="bio-input">Bio</label>
+                        <textarea id="bio-input" placeholder="Tell us about yourself" rows="3"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="save-profile" class="save-profile-button">Save Profile</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- User Profile Modal -->
+    <div id="user-profile-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>User Profile</h2>
+                <button id="close-user-profile-modal" class="close-modal">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="user-profile-info">
+                    <div class="user-profile-avatar">
+                        <img id="user-profile-avatar" src="/placeholder.svg" alt="User avatar">
+                    </div>
+                    <h3 id="user-profile-name">User Name</h3>
+                    <p id="user-profile-wallet" class="user-wallet-address">0x1234...5678</p>
+                    <p id="user-profile-bio" class="user-bio">No bio provided</p>
+                </div>
+                <div class="user-profile-actions">
+                    <!-- Add friend or chat buttons will be added here dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Message Context Menu -->
+    <div id="message-context-menu" class="context-menu hidden">
+        <ul>
+            <li id="context-delete-for-me">Delete for me</li>
+            <li id="context-delete-for-all">Delete for everyone</li>
+            <li id="context-view-profile">View profile</li>
+        </ul>
+    </div>
+    
+    <!-- File Upload Input (hidden) -->
+    <input type="file" id="file-upload" accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.xls,.xlsx,.txt" hidden>
+    
+    <div id="notification-container" class="notification-container"></div>
+    
+    <script src="static/js/app.js"></script>
+    <script src="static/js/emoji.js"></script>
+
+    <script>
+        console.log("Page fully loaded");
+        // Check if MetaMask is available
+        if (typeof window.ethereum !== 'undefined') {
+            console.log("MetaMask is available");
+        } else {
+            console.log("MetaMask is NOT available");
+            document.getElementById('status-text').textContent = "MetaMask not detected";
+        }
+       
+    </script>
+</body>
+</html>
+

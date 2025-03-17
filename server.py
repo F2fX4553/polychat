@@ -100,7 +100,7 @@ friend_requests = Table(
 class User(db.Model):
     __tablename__ = 'users'
     
-    wallet_address = Column(String(42), primary_key=True)
+    wallet_address = Column(String(42), primary_key=True,, index=True)
     display_name = Column(String(100))
     avatar = Column(String(255))
     bio = Column(Text)
@@ -220,8 +220,8 @@ class Message(db.Model):
     content = Column(Text)
     sender_id = Column(String(42), ForeignKey('users.wallet_address'))
     receiver_id = Column(String(42), ForeignKey('users.wallet_address'), nullable=True)
-    room_id = Column(String(36), ForeignKey('chat_rooms.id'), nullable=True)
-    private_room_id = Column(String(36), ForeignKey('private_chat_rooms.id'), nullable=True)
+    room_id = Column(String(36), ForeignKey('chat_rooms.id'), index=True, nullable=True)
+    private_room_id = Column(String(36), ForeignKey('private_chat_rooms.id'),index=True, nullable=True)
     type = Column(String(20), default='text')  # text, image, file
     file_url = Column(String(255), nullable=True)
     file_name = Column(String(255), nullable=True)
@@ -527,6 +527,11 @@ def upload_file():
         print(f"Error in upload_file: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
+@socketio.on('new_message')
+def handle_new_message(data):
+    # أرسل الرسالة فقط إلى الغرفة المحددة
+    emit('new_message', data, room=data['room_id'], include_self=False)
+
 # Get user profile
 @app.route('/api/profile', methods=['GET'])
 def get_profile():
@@ -635,8 +640,10 @@ def upload_avatar():
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
+cache = Cache(app, config={'CACHE_TYPE': 'RedisCache', 'CACHE_REDIS_URL': 'redis://localhost:6379/0'})
 # Get available rooms
 @app.route('/api/rooms', methods=['GET'])
+@cache.cached(timeout=60)
 def get_rooms():
     rooms = ChatRoom.query.filter_by(is_private=False).all()
     return jsonify({room.name: room.to_dict() for room in rooms})
@@ -1155,10 +1162,6 @@ def find_free_port():
         return s.getsockname()[1]
 
 if __name__ == '__main__':
-    port = 4000
-    print(f"Server running on http://127.0.0.1:{port}")
-    socketio.run(app, debug=True, port=port, allow_unsafe_werkzeug=True)
-
-print("Server code is ready to run. Install requirements with: pip install flask flask-cors flask-socketio flask-sqlalchemy web3")
-print("Then run: python server_fixed.py")
+  
+    socketio.run(app,allow_unsafe_werkzeug=True)
 

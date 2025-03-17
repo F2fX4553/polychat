@@ -1846,8 +1846,8 @@ async function pollActiveUsers() {
     console.error("Error polling active users:", error)
   }
 
-  // Poll every 30 seconds
-  setTimeout(pollActiveUsers, 30000)
+  // Poll every 10 seconds
+  setTimeout(pollActiveUsers, 10000)
 }
 
 // Update active users list
@@ -1900,10 +1900,6 @@ async function updateUserPresence() {
 
 // Load messages
 async function loadMessages() {
-   if (localStorage.getItem(currentRoom)) {
-        const cachedMessages = JSON.parse(localStorage.getItem(currentRoom));
-        renderMessages(cachedMessages);
-    }
   try {
     let url
     if (isChatPrivate) {

@@ -5,4 +5,4 @@ flask-sqlalchemy
 web3
 gunicorn
 eventlet
-
+gunicorn==21.2.0
